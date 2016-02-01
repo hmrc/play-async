@@ -1,4 +1,3 @@
-* uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleNormalController - Example default non-async Play action.
 
 play-async
 ================
