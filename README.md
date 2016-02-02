@@ -1,47 +1,47 @@
 
-play-async
-================
+# play-async
+
+[![Build Status](https://travis-ci.org/hmrc/play-async.svg?branch=master)](https://travis-ci.org/hmrc/play-async) [ ![Download](https://api.bintray.com/packages/hmrc/releases/play-async/images/download.svg) ](https://bintray.com/hmrc/releases/play-async/_latestVersion)
+
 
 Framework disconnects the HTTP client (Browser/RestFul API) request from waiting for long running server-side actions to complete and shields the application server from clients attempting to re-submit duplicate requests.
 
 The play-async framework provides the tools to transform a synchronous controller action into a true async controller, where the client drives the polling for the requeted resource back to the server.
 
-Background
-==========
+##Background
 
-Browser or API requests to web applications, block waiting for the request to be processed by the web application before HTML content is returned. If the web application processing the request invokes back-end systems, the maximum response time of the request is dependent on the configured socket read timeout.
+Browser or API requests to web applications will block waiting for the request to be processed by the web application before HTML content is returned. If the web application processing the request invokes back-end systems, the maximum response time of the request is dependent on the configured socket read timeout.
 
-If a server side action invokes only 2 backend HTTP services in succession during a single user request, and the socket timeouts on these services are configured to 30 seconds, the maximum response time for this journey could be 59 seconds due to the large read timeout value.
+If a server side action invokes only 2 backend HTTP services in succession during a single user request, and the socket timeouts on these services are configured to 30 seconds, the maximum response time for this page request could be 59 seconds due to the large read timeout value.
 
-When systems start to degrade, response times to clients increase. The normal reaction for a user where the browser is blocking request content, would be to either refresh the page or press the browser back button and re-attempt to submit the request.
-Since the client browser makes a blocking HTTP request to the server side action to service a single page request, any termination of the request will leave the original request running on the application server, which results in wasted transaction/resources being consumed for wasted requests, which in turn can put unnecessary load on back-end systems,
-and possibly the application server from processing too many requests.
+When systems start to degrade, response times to clients increase. The normal reaction for a user where the browser is taking a long time to load the page, would be to either refresh the page or press the browser back button and re-attempt to submit the request.
+Since the client browser makes a blocking HTTP request to the server side action to service a single page request, termination of the HTTP request will leave the original request running on the application server, which results in wasted transaction/resources being consumed for wasted requests, which in turn can put unnecessary load on back-end systems,
+and the application server from processing too many requests.
 
-The play-async library shields the application server from the issues detailed above. Instead of the usual approach of the client blocking and waiting for the server response, the client simply pollsfor the response to the requested resource from the server.
+The play-async library shields the application server from the issues detailed above. Instead of the usual approach of the client blocking and waiting for the server response, the client simply polls for the response to the requested resource from the server.
 
-Features
-========
+##Features
 
 The play_async_mvc library addresses the above concerns with the following features…
 
-* Allow long running Futures to be placed onto a background queue for off-line processing and disconnect the HTTP client from waiting on the result. This removes the need for the client to remain connected to the application server waiting for the result.
-* Tools to control the web journey when async tasks are executing.
+* Allow long running Future to be placed onto a background queue for off-line processing and disconnect the HTTP client from waiting on the result. This removes the need for the client to remain connected to the application server waiting for the result.
+* Throttle the number of concurrent async requests that are currently executing on a single application server instance.
 * Shield the application servers from processing unnecessary duplicate user requests. i.e. frustrated users refreshing or re-submitting duplicate requests.
+* Tools to control the web journey when async tasks are executing.
 * Allow back-end service read socket timeouts to be increased! Normally read timeouts are defined too short in order to reduce the amount of time the client waits for the response!
 * Present auto-refreshing presentation content informing the user the request is being processed.
 * Library supports two modes for running a Future on a background queue. The blocking mode will block the client request a number of seconds when the background Future is initially created, in order to remove the need for the polling page to be presented to the user when systems response times are in SLA. The non-blocking mode will always return the polling page.
-* Ability to throttle the number of concurrent async requests that are currently executing on a single application server instance.
 * Framework can be used on both front-end HTTP content requests and back-end ReSTFul services.
 * Library is lightweight Trait where the client integrates by extending the Play Controller action with the AsyncMVC Trait.
 * Remove the need for long running socket connections through web-servers and firewalls.
 * Cluster friendly.
 
-Under the hood
-==============
-For each play-async Controller defined within an application, an Akka Actor is also defined on each application server to process the off-line request. The clients session is used to store a unique Id which is associated with an off-line task. The status of the requested task is stored within a cache, which is supplied through the integration of the framework. The cache is used as the central store, where polling requests to application servers in a cluster will invoke to check the status of the task, and obtain the response of the processed Future.
+##Under the hood
 
-Code Overview
-==============
+The play-async Controller defined within an application will use an Akka Actor to process the off-line request. The clients session is used to store a unique Id which is associated with an off-line task. The status of the off-line task is stored within a cache, which is supplied through the integration of the framework. The cache is used as the central store, where async polling requests to application servers (in a cluster) will invoke to check the status of the task, and obtain the response of the processed Future.
+The HeaderCarrier associated with the original request will be carried through to the off-line request.
+
+##Code Example
 
 This section demonstrates the conversion from a normal blocking Play Controller action to a play-async action.
 
@@ -112,20 +112,31 @@ The supported status codes which can be supplied to asyncUICallbackWithStatus ar
 |Error   | The task generated an error.  |
 |Throttle   | The throttle marker has been reached. Too many concurrent requests.  |
 
-Please see the following example controllers…
-==============================================
+##Example PlayAsync controller
 
-* uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleAsyncController	- Example async controller where the client is disconnected from the Future. The example is based on the ExampleNormalController controller where the Future and Result have been separated.
-
-* uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleNormalController - Example default non-async Play action.
+uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleAsyncController	- Example async controller where the client is disconnected from the Future. The example is based on the ExampleNormalController controller where the Future and Result have been separated.
 
 
 ## Installing
- 
+
 Include the following dependency in your SBT build
- 
+
 ``` scala
 resolvers += Resolver.bintrayRepo("hmrc", "releases")
- 
+
 libraryDependencies += "uk.gov.hmrc" %% "play-async" % "[INSERT-VERSION]"
 ```
+
+## Configuration
+
+In `/conf/play.plugins` add the reference to `PlayAsyncPlugin`
+
+```scala
+    5000:uk.gov.hmrc.play.asyncmvc.plugin.PlayAsyncPlugin
+```
+
+*Note: If 5000 is already in use choose another number*
+
+### License
+
+This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html").
