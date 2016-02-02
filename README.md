@@ -119,3 +119,13 @@ Please see the following example controllers…
 
 * uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleNormalController - Example default non-async Play action.
 
+
+## Installing
+ 
+Include the following dependency in your SBT build
+ 
+``` scala
+resolvers += Resolver.bintrayRepo("hmrc", "releases")
+ 
+libraryDependencies += "uk.gov.hmrc" %% "play-async" % "[INSERT-VERSION]"
+```
