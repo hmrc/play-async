@@ -174,7 +174,7 @@ trait ExampleAsyncController extends Controller with AsyncMvcIntegration {
     val keyStoreCacheName = "AsyncMVCCache"
     val keyStoreFormName  = "AsyncMVCCacheKey"
 
-    override def put(id: String, value: TaskCache)(implicit hc:HeaderCarrier): Future[CacheMap] =  httpSessionCache.cache[TaskCache](keyStoreCacheName, id, keyStoreFormName, value)
+    override def put(id: String, value: TaskCache)(implicit hc:HeaderCarrier): Future[Unit] =  httpSessionCache.cache[TaskCache](keyStoreCacheName, id, keyStoreFormName, value).map(_ => Unit)
     override def get(id: String)(implicit hc:HeaderCarrier): Future[Option[TaskCache]] =  httpSessionCache.fetchAndGetEntry[TaskCache](keyStoreCacheName, id, keyStoreFormName)
   }
 }

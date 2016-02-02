@@ -80,9 +80,9 @@ trait AsyncSetup {
     val cache = new Cache[TaskCache] {
       var bodyCache:Option[TaskCache] = None
 
-      def put(id:String, value:TaskCache)(implicit hc:HeaderCarrier):Future[CacheMap] = {
+      def put(id:String, value:TaskCache)(implicit hc:HeaderCarrier):Future[Unit] = {
         bodyCache = Some(value)
-        Future.successful(CacheMap("id", Map()))
+        Future.successful(Unit)
       }
       
       def get(id:String)(implicit hc:HeaderCarrier):Future[Option[TaskCache]] = {

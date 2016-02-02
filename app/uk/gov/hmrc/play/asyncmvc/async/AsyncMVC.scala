@@ -17,7 +17,6 @@
 package uk.gov.hmrc.play.asyncmvc.async
 
 import akka.actor.ActorRef
-import uk.gov.hmrc.http.cache.client.CacheMap
 import uk.gov.hmrc.play.asyncmvc.model._
 import play.api.Logger
 import play.api.mvc._
@@ -281,7 +280,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
  * @tparam T - The type of the Cache.
  */
 trait Cache[T] {
-  def put(id:String, value:TaskCache)(implicit hc:HeaderCarrier) : Future[CacheMap]
+  def put(id:String, value:TaskCache)(implicit hc:HeaderCarrier) : Future[Unit]
   def get(id:String)(implicit hc:HeaderCarrier) : Future[Option[T]]
 }
 

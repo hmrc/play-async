@@ -46,9 +46,9 @@ class AsyncTaskSpec extends UnitSpec with FakePlayApplication with ScalaFutures 
     class CacheStore extends Cache[TaskCache] {
       var store:Option[TaskCache] = None
 
-      override def put(id: String, value: TaskCache)(implicit hc: HeaderCarrier): Future[CacheMap] = {
+      override def put(id: String, value: TaskCache)(implicit hc: HeaderCarrier): Future[Unit] = {
         store = Some(value)
-        Future.successful(new CacheMap("id", Map("item" -> Json.toJson(value))))
+        Future.successful(Unit)
       }
 
       override def get(id: String)(implicit hc: HeaderCarrier): Future[Option[TaskCache]] = {

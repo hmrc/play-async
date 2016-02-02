@@ -125,7 +125,7 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
       "successfully process all concurrent requests and once all tasks are complete, verify the throttle value is 0" in {
         val time=System.currentTimeMillis()
 
-        val concurrentRequests = (0 until 30).foldLeft(Seq.empty[SetupConcurrencyDynamicBlocking]) {
+        val concurrentRequests = (0 until 15).foldLeft(Seq.empty[SetupConcurrencyDynamicBlocking]) {
           (list, counter) => {
             val asyncRequest = new SetupConcurrencyDynamicBlocking {
               override val testSessionId=s"TestIdConcurrent$counter"
