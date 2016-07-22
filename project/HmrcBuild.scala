@@ -37,12 +37,12 @@ private object AppDependencies {
   val test = Seq(
     "org.scalatest" %% "scalatest" % "2.2.1" % testScope,
     "org.pegdown" % "pegdown" % "1.4.2" % testScope,
-    "uk.gov.hmrc" %% "hmrctest" % "1.4.0" % testScope,
-    "uk.gov.hmrc" %% "frontend-bootstrap" % "5.1.1" % testScope,
-    "uk.gov.hmrc" %% "play-authorised-frontend" % "4.5.0" % testScope,
+    "uk.gov.hmrc" %% "hmrctest" % "1.7.0" % testScope,
+    "uk.gov.hmrc" %% "frontend-bootstrap" % "6.5.0" % testScope,
+    "uk.gov.hmrc" %% "play-authorised-frontend" % "5.1.0" % testScope,
     "uk.gov.hmrc" %% "play-config" % "2.0.1" % testScope,
     "uk.gov.hmrc" %% "http-caching-client" % "5.3.0" % testScope,
-    "uk.gov.hmrc" %% "play-ui" % "4.2.0" % testScope
+    "uk.gov.hmrc" %% "play-ui" % "4.14.0" % testScope
   )
 
   def apply() = compile ++ test

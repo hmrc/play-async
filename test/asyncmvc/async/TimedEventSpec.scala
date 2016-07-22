@@ -16,9 +16,7 @@
 
 package asyncmvc.async
 
-import org.scalatest.concurrent.PatienceConfiguration.Interval
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
-import org.scalatest.time.{Milliseconds, Span}
 import uk.gov.hmrc.play.asyncmvc.async.{TimedEvent}
 import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.duration._
