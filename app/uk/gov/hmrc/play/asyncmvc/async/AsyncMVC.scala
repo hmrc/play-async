@@ -25,7 +25,6 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-
 /**
  * The AsyncMVC trait supports two features detailed below...
  *
@@ -45,7 +44,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
   def waitForAsync       : Call                    // Wait for async route. Used when waitMode is true.
   def throttleLimit      : Long                    // Throttle limit.
   def blockingDelayTime  : Long                    // Wait mode - Amount of time to block waiting for a background task to complete, before either returning the result or the poll page.
-  def sessionHttpCache   : Cache[TaskCache]        // Cache used to store state of the async task.
+  def taskCache          : Cache[TaskCache]        // Cache used to store state of the async task.
   def outputToString(value:OUTPUT) : String        // Convert [OUTPUT] type to string.
   def convertToJSONType(value:String) : OUTPUT     // Convert String to [OUTPUT] type.
 
@@ -53,14 +52,17 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
                         // page once the Future is sent off-line. If the value is true, the user will block for a configurable period of time and then
                         // check if the task has completed. This mode is used to not display the poll page if the Future completes within the configurable time.
 
+  private type callbackSuccessType = OUTPUT => String => Future[Result]
+  private type callbackWithStatusType = Int => Option[String] => Future[Result]
+
 
   // Function wrapper for request actions which need to be aware of an executing async task. Used to route the user back to the poll view if an async task is currently executing.
   // NOTE: The action wrapper is lightweight and only session is check for the existence of a running task!
   class AsyncActionWrapper {
 
-    def async(callbackWithStatus:Int=>Future[Result])(view:Int=>Future[Result])(implicit request:Request[AnyContent]): Future[Result] = {
+    def async(callbackWithStatus:callbackWithStatusType)(view:Int=>Future[Result])(implicit request:Request[AnyContent]): Future[Result] = {
       withCorrespondingAsyncIdMatch {
-        case Some(task) => callbackWithStatus(ViewCodes.Polling)
+        case Some(task) => callbackWithStatus(ViewCodes.Polling)(Some(task.id))
 
         case _ => view(AsyncActionWrapperCodes.NoASyncTaskFound)
       }
@@ -100,7 +102,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
    * @param callbackStatus  - Invoked when the client is responsible for rendering the display based on a status. This could be timeout, error...
    * @return - Future[Result]
    */
-  def pollTask(route:Call, callback:OUTPUT=>Future[Result], callbackStatus:Int=>Future[Result])(implicit request:Request[AnyContent], hc:HeaderCarrier) = checkTaskStatus(route, callback, callbackStatus)
+  def pollTask(route:Call, callback:callbackSuccessType, callbackStatus:callbackWithStatusType)(implicit request:Request[AnyContent], hc:HeaderCarrier) = checkTaskStatus(route, callback, callbackStatus)
 
   /**
    * Function used in async blocking mode to not display the polling page when async task completes within expected wait period.
@@ -115,7 +117,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
    * @return - Future[Result]
    *
    */
-  def waitForAsyncTask(route:Call, callback:OUTPUT=>Future[Result], callbackStatus:Int=>Future[Result])(implicit request:Request[AnyContent], hc:HeaderCarrier) = {
+  def waitForAsyncTask(route:Call, callback:callbackSuccessType, callbackStatus:callbackWithStatusType)(implicit request:Request[AnyContent], hc:HeaderCarrier) = {
 
     withCorrespondingAsyncIdMatch {
       case Some(session) =>
@@ -133,14 +135,13 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
    * Wrap the Future for off-line processing.
    *
    * @param futureFunction - The Future function to invoke off-line.
-   * @param callbackOnComplete  - Invoked when the off-line 'futureFunction' completes successfully.
    * @param callbackWithStatus  - Invoked when the client is responsible for rendering the display based on a status.
    * @return - Future[Result]
    *
    * Important Note: The callbacks defined by the caller could include implicit parameters. This allows contexts (like the AuthContext)
    * to be passed back to the caller transparently from this library!
    */
-  def asyncWrapper(callbackOnComplete:OUTPUT=>Future[Result], callbackWithStatus:Int=>Future[Result])
+  def asyncWrapper(callbackWithStatus:callbackWithStatusType)
                   (futureFunction: HeaderCarrier => Future[OUTPUT])
                   (implicit headerCarrier: HeaderCarrier, request:Request[AnyContent]): Future[Result] = {
 
@@ -158,7 +159,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
           // Send future function to Actor for processing.
           actorRef ! AsyncMessage(ident, futureFunction, outputToString, Some(headerCarrier), DateTimeUtils.now.getMillis)
           // Update session state and route to the poll view.
-          callbackWithStatus(ViewCodes.Polling).map(res => res.withSession(res.session.copy(data = buildSessionWithMVCSessionId(id,uniqueId, res.session.data))))
+          callbackWithStatus(ViewCodes.Polling)(Some(ident)).map(res => res.withSession(res.session.copy(data = buildSessionWithMVCSessionId(id,uniqueId, res.session.data))))
         }
 
         val result = createAsyncTask()
@@ -184,10 +185,10 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
    * @param hc - Header carrier.
    * @return - Future[Result]
    */
-  private def checkTaskStatus(route:Call, callback:OUTPUT=>Future[Result], callbackStatus:Int=>Future[Result])(implicit request:Request[AnyContent], hc:HeaderCarrier): Future[Result] = {
+  private def checkTaskStatus(route:Call, callback:callbackSuccessType, callbackStatus:callbackWithStatusType)(implicit request:Request[AnyContent], hc:HeaderCarrier): Future[Result] = {
 
     def getTaskAndDecideRoute(id:String) = {
-        sessionHttpCache.get(id).map {
+      taskCache.get(id).map {
           case Some(task: TaskCache) =>
             Logger.info(wrap(s"checkTaskStatus: Found task id [${task.id}] in cache. Checking route..."))
             decideUIAction(task, callback, callbackStatus)
@@ -200,7 +201,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
       }.recover {
         case e: Exception =>
           Logger.error(wrap(s"checkTaskStatus: Failed to invoke cache for task Id [$id]. Exception is [$e]."))
-          Right(removeAsyncKeyFromSession(callbackStatus(ViewCodes.Error)))
+          Right(removeAsyncKeyFromSession(callbackStatus(ViewCodes.Error)(None)))
       }
     }
 
@@ -227,24 +228,24 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
    * @param request - Http Request.
    * @return - Future[Result]
    */
-  private def decideUIAction(task:TaskCache, callback:OUTPUT=>Future[Result], callbackWithStatus:Int=>Future[Result])(implicit request:Request[AnyContent]): Either[Future[Result], Future[Result]] = {
+  private def decideUIAction(task:TaskCache, callback:callbackSuccessType, callbackWithStatus:callbackWithStatusType)(implicit request:Request[AnyContent]): Either[Future[Result], Future[Result]] = {
     task.status match {
       case StatusCodes.Complete =>                // SUCCESS - Task has completed, invoke callback to generate result.
         Logger.info(wrap(s"decideUIAction:The task [${task.id}] has completed successfully."))
         // Success - route to callback and clear async session model.
-        Right(removeAsyncKeyFromSession(callback(convertToJSONType(task.jsonResponse.getOrElse(throw new Exception(s"No JSON response found for async task! Task ${task.id}"))))))
+        Right(removeAsyncKeyFromSession(callback(convertToJSONType(task.jsonResponse.getOrElse(throw new Exception(s"No JSON response found for async task! Task ${task.id}"))))(task.id)))
 
       case StatusCodes.Error =>                   // ERROR - Route to the error page.
         Logger.info(wrap(s"decideUIAction:The task [${task.id}] failed!"))
-        Right(removeAsyncKeyFromSession(callbackWithStatus(ViewCodes.Error)))
+        Right(removeAsyncKeyFromSession(callbackWithStatus(ViewCodes.Error)(Some(task.id))))
 
       case _ =>
         if (isTimeout(task.start)) {              // TIMEOUT - task timed out, route to timeout page.
           Logger.error(wrap(s"decideUIAction:Timed out waiting for the task Id [${task.id}] to complete."))
-          Right(removeAsyncKeyFromSession(callbackWithStatus(ViewCodes.Timeout)))
+          Right(removeAsyncKeyFromSession(callbackWithStatus(ViewCodes.Timeout)(Some(task.id))))
         } else {                                  // STILL PROCESSING...
           Logger.info(wrap(s"decideUIAction:The task [${task.id}] is still processing!"))
-          Left(callbackWithStatus(ViewCodes.Polling))
+          Left(callbackWithStatus(ViewCodes.Polling)(Some(task.id)))
         }
     }
   }
@@ -258,11 +259,11 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
   private def removeAsyncKeyFromSession(result:Future[Result])(implicit request: Request[AnyContent]): Future[Result] = {
     result.map(res => res.withSession(res.session.copy(data = clearASyncIdFromSession(res.session.data))))
   }
-  private def throttleUp(callbackWithStatus:Int=>Future[Result])(func: => Future[Result])(implicit request:Request[AnyContent]): Future[Result] = {
+  private def throttleUp(callbackWithStatus:callbackWithStatusType)(func: => Future[Result])(implicit request:Request[AnyContent]): Future[Result] = {
     
     if (Throttle.current != -1 && Throttle.current >= throttleLimit)  {
       Logger.warn(wrap(s"The throttle limit has been reached! Current limit [$throttleLimit] Current [${Throttle.current}]"))
-      removeAsyncKeyFromSession(callbackWithStatus(ViewCodes.ThrottleReached))
+      removeAsyncKeyFromSession(callbackWithStatus(ViewCodes.ThrottleReached)(None))
     } else {
       Throttle.up()
       func

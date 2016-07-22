@@ -17,7 +17,6 @@
 package asyncmvc.controllers
 
 import akka.actor.{ActorRef, Props}
-import uk.gov.hmrc.http.cache.client.CacheMap
 import uk.gov.hmrc.play.asyncmvc.async.{Cache, TimedEvent}
 import uk.gov.hmrc.play.asyncmvc.example.connectors.{Stock, StockConnector}
 import uk.gov.hmrc.play.asyncmvc.example.controllers.{ExampleAsyncController, InputForm}
@@ -59,7 +58,7 @@ trait AsyncSetup {
       }
 
       override def getStock(id: Long): Future[Stock] = {
-        TimedEvent.delayedSuccess(delay, 0).map(a => {
+        TimedEvent.delayedSuccess(delay, 0).map(_ => {
           Stock("TEST DYNAMIC DELAY", id)
         })
       }
@@ -72,9 +71,9 @@ trait AsyncSetup {
 
     trait ControllerUnderTest extends ExampleAsyncController {
       def getName :String = ???
-      override lazy val sessionHttpCache = cache
+      override lazy val taskCache = cache
       override def waitMode = false
-      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(sessionHttpCache, CLIENT_TIMEOUT)), name = getName)
+      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(taskCache, CLIENT_TIMEOUT)), name = getName)
     }
 
     val cache = new Cache[TaskCache] {
@@ -132,7 +131,7 @@ trait AsyncSetup {
       override lazy val stockConnector: StockConnector = dynamicDelayStockConnector(1000)
       override def buildUniqueId() = testSessionId
       override def getClientTimeout = 1
-      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(sessionHttpCache, 1000)), name = getName)
+      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(cache, 1000)), name = getName)
     }
   }
 
@@ -147,7 +146,7 @@ trait AsyncSetup {
       override def waitMode = true
       override def getClientTimeout = 1
       override def blockingDelayTime = 1
-      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(sessionHttpCache, 100)), name = getName)
+      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(cache, 100)), name = getName)
     }
   }
 
@@ -179,7 +178,7 @@ trait AsyncSetup {
 
     override lazy val controller : ExampleAsyncController = new ExampleAsyncController() {
       override lazy val stockConnector : StockConnector = ???
-      override lazy val sessionHttpCache  = ???
+      override lazy val taskCache  = ???
       override def buildUniqueId() = testSessionId
       override def waitMode = true
       override def throttleLimit = 0
@@ -192,7 +191,7 @@ trait AsyncSetup {
 
     override lazy val controller : ExampleAsyncController = new ExampleAsyncController() {
       override lazy val stockConnector : StockConnector = ???
-      override lazy val sessionHttpCache  = ???
+      override lazy val taskCache  = ???
       override def buildUniqueId() = testSessionId
       override def waitMode = false
       override def throttleLimit = 0
@@ -210,7 +209,7 @@ trait AsyncSetup {
       override def buildUniqueId() = testSessionId
       override def waitMode = true
       override def getClientTimeout = 5000
-      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(sessionHttpCache, getClientTimeout)), name = getName)
+      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(cache, getClientTimeout)), name = getName)
     }
   }
 
@@ -223,7 +222,7 @@ trait AsyncSetup {
       override def buildUniqueId() = testSessionId
       override def waitMode = true
       override def getClientTimeout = 80000
-      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(sessionHttpCache, getClientTimeout)), name = getName)
+      override lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(cache, getClientTimeout)), name = getName)
     }
   }
 

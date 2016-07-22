@@ -51,7 +51,7 @@ trait AsyncMvcIntegration extends AsyncMVC[Stock] {
 
   final val CLIENT_TIMEOUT=8000L
 
-  lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(sessionHttpCache, CLIENT_TIMEOUT)), actorName)
+  lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(taskCache, CLIENT_TIMEOUT)), actorName)
   override def         actorRef = asyncActor
   override def getClientTimeout = CLIENT_TIMEOUT
 
