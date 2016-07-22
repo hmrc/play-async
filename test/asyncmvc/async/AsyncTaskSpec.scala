@@ -22,7 +22,6 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Millis, Span}
 import play.api.libs.json.Json
 import play.api.mvc.Controller
-import uk.gov.hmrc.http.cache.client.CacheMap
 import uk.gov.hmrc.play.asyncmvc.async.{Throttle, TimedEvent, Cache}
 import uk.gov.hmrc.play.asyncmvc.example.connectors.Stock
 import uk.gov.hmrc.play.asyncmvc.model.{StatusCodes, TaskCache}
@@ -60,7 +59,7 @@ class AsyncTaskSpec extends UnitSpec with FakePlayApplication with ScalaFutures 
       val cache = new CacheStore
 
       override val actorName = testId
-      override def sessionHttpCache: Cache[TaskCache] = cache
+      override def taskCache: Cache[TaskCache] = cache
 
       import AsyncMVCAsyncActor.AsyncMessage
 
@@ -105,10 +104,10 @@ class AsyncTaskSpec extends UnitSpec with FakePlayApplication with ScalaFutures 
 
       test(success) {
         eventually(Timeout(Span(oneSecond * 2, Millis))) {
-          val result: Option[TaskCache] = asyncTask.sessionHttpCache.get("someId").futureValue
+          val result: Option[TaskCache] = asyncTask.taskCache.get("someId").futureValue
 
           result shouldBe Some(TaskCache("Example", StatusCodes.Complete, Some(Json.toJson(stock).toString()), result.get.start, result.get.complete))
-          result.get.complete should be > asyncTask.cache.get("id").get.start
+          result.get.complete should be > asyncTask.taskCache.get("id").get.start
           Throttle.current shouldBe 0
         }
       }
@@ -119,10 +118,10 @@ class AsyncTaskSpec extends UnitSpec with FakePlayApplication with ScalaFutures 
 
       test(error) {
         eventually(Timeout(Span(oneSecond, Millis))) {
-          val result: Option[TaskCache] = asyncTask.sessionHttpCache.get("someId").futureValue
+          val result: Option[TaskCache] = asyncTask.taskCache.get("someId").futureValue
 
           result shouldBe Some(TaskCache("Example", StatusCodes.Error, None, result.get.start, result.get.complete))
-          result.get.complete should be > asyncTask.cache.get("id").get.start
+          result.get.complete should be > asyncTask.taskCache.get("id").get.start
           Throttle.current shouldBe 0
         }
       }
@@ -134,10 +133,10 @@ class AsyncTaskSpec extends UnitSpec with FakePlayApplication with ScalaFutures 
       test(notInvoked, 0) {
 
         eventually(Timeout(Span(oneSecond, Millis))) {
-          val result: Option[TaskCache] = asyncTask.sessionHttpCache.get("someId").futureValue
+          val result: Option[TaskCache] = asyncTask.taskCache.get("someId").futureValue
 
           result shouldBe Some(TaskCache("Example", StatusCodes.Timeout, None, result.get.start, result.get.complete))
-          result.get.complete should be > asyncTask.cache.get("id").get.start
+          result.get.complete should be > asyncTask.taskCache.get("id").get.start
           Throttle.current shouldBe 0
         }
       }
@@ -148,11 +147,11 @@ class AsyncTaskSpec extends UnitSpec with FakePlayApplication with ScalaFutures 
 
       test(error) {
         eventually(Timeout(Span(oneSecond, Millis))) {
-          val result: Option[TaskCache] = asyncTask.sessionHttpCache.get("someId").futureValue
+          val result: Option[TaskCache] = asyncTask.taskCache.get("someId").futureValue
 
           result shouldBe Some(TaskCache("Example", StatusCodes.Error, None, result.get.start, result.get.complete))
           // >= since no delay incurred in processing the future!
-          result.get.complete should be >= asyncTask.cache.get("id").get.start
+          result.get.complete should be >= asyncTask.taskCache.get("id").get.start
           Throttle.current shouldBe 0
         }
       }

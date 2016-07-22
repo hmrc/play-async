@@ -16,9 +16,12 @@
 
 package asyncmvc.async
 
+import org.scalatest.concurrent.PatienceConfiguration.Interval
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.time.{Milliseconds, Span}
 import uk.gov.hmrc.play.asyncmvc.async.{TimedEvent}
 import uk.gov.hmrc.play.test.UnitSpec
+import scala.concurrent.duration._
 
 class TimedEventSpec extends UnitSpec with ScalaFutures with Eventually {
 
@@ -27,10 +30,14 @@ class TimedEventSpec extends UnitSpec with ScalaFutures with Eventually {
     "Incur a delay before executing the Future" in {
 
       val now = System.currentTimeMillis()
+      val response: Int = await(TimedEvent.delayedSuccess(2000, 999))(4 seconds)
 
-      await(TimedEvent.delayedSuccess(1000, 0))
+      val processTime = System.currentTimeMillis()
+      println(s"start time $now - Expired time $processTime")
 
-      System.currentTimeMillis() shouldBe >(now + 1000)
+      response shouldBe 999
+      processTime shouldBe >(now + 1000)
+
     }
   }
 }

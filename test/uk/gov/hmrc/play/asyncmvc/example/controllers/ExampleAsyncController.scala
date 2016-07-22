@@ -19,7 +19,7 @@ package uk.gov.hmrc.play.asyncmvc.example.controllers
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc._
-import uk.gov.hmrc.http.cache.client.{SessionCache, CacheMap}
+import uk.gov.hmrc.http.cache.client.SessionCache
 import uk.gov.hmrc.play.asyncmvc.async.{Cache, AsyncPaths}
 import uk.gov.hmrc.play.asyncmvc.example.config.ExampleWsHttp
 import uk.gov.hmrc.play.asyncmvc.example.connectors.{Stock, StockConnector}
@@ -61,7 +61,7 @@ trait ExampleAsyncController extends Controller with AsyncMvcIntegration {
   val testUpdateSessionValue = "testSessionValue"
 
   lazy val stockConnector: StockConnector = ???
-  lazy val httpSessionCache: SessionCache = ??? //! Note: Uncomment in order for standalone testing using the session cache!
+  lazy val httpSessionCache: SessionCache = ???
 
   implicit val hc = HeaderCarrier()
 
@@ -103,10 +103,10 @@ trait ExampleAsyncController extends Controller with AsyncMvcIntegration {
               successForm => {
 
                 // Async function wrapper responsible for executing below code onto a background queue.
-                asyncWrapper(updateUICallback, updateUICallbackWithStatus) {
+                asyncWrapper(updateUICallbackWithStatus) {
                   hc =>
 
-                    // Invoke 3 backend I/O resources.
+                    // Invoke 3 backend I/O resources in sequence.
                     // i.e. Controller action performing an expensive operation which could incur delays in returning the response to the client.
                     for {
                       _ <- stockConnector.getStock(successForm.id)
@@ -125,7 +125,7 @@ trait ExampleAsyncController extends Controller with AsyncMvcIntegration {
    *  ASYNC NOTES:
    *  The callback can be invoked from either asyncWrapper, waitForAsyncTask or pollTask.
    */
-  def updateUICallback(stock:Stock)(implicit request:Request[AnyContent]) : Future[Result] = {
+  def updateUICallback(stock:Stock)(id:String)(implicit request:Request[AnyContent]) : Future[Result] = {
     val json=stock.asInstanceOf[Stock]
     Future.successful(Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.complete(json)).withSession(addSessionDataToResponseForTest("SUCCESS")))
   }
@@ -135,7 +135,7 @@ trait ExampleAsyncController extends Controller with AsyncMvcIntegration {
    * ASYNC NOTES:
    * The callback can be invoked from either asyncWrapper, waitForAsyncTask or pollTask.
    */
-  def updateUICallbackWithStatus(status:Int)(implicit request:Request[AnyContent]) : Future[Result] = {
+  def updateUICallbackWithStatus(status:Int)(id:Option[String])(implicit request:Request[AnyContent]) : Future[Result] = {
     val res = status match {
       case ViewCodes.Timeout => Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.timeout.apply()).withSession(addSessionDataToResponseForTest("TIMEOUT"))
       case ViewCodes.Polling => Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.polling.apply())
@@ -170,7 +170,7 @@ trait ExampleAsyncController extends Controller with AsyncMvcIntegration {
       pollTask(Call("GET","/capture"), updateUICallback, updateUICallbackWithStatus)
   }
 
-  override def sessionHttpCache = new Cache[TaskCache] {
+  override def taskCache = new Cache[TaskCache] {
     val keyStoreCacheName = "AsyncMVCCache"
     val keyStoreFormName  = "AsyncMVCCacheKey"
 
