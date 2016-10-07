@@ -131,12 +131,9 @@ class AsyncTaskSpec extends UnitSpec with FakePlayApplication with ScalaFutures 
       def notInvoked(hc: HeaderCarrier) = Future.successful(Future.failed(new IllegalArgumentException("Controlled Explosion!")))
 
       test(notInvoked, 0) {
-
         eventually(Timeout(Span(oneSecond, Millis))) {
           val result: Option[TaskCache] = asyncTask.taskCache.get("someId").futureValue
-
-          result shouldBe Some(TaskCache("Example", StatusCodes.Timeout, None, result.get.start, result.get.complete))
-          result.get.complete should be > asyncTask.taskCache.get("id").get.start
+          result shouldBe None
           Throttle.current shouldBe 0
         }
       }

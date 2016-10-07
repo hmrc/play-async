@@ -161,6 +161,28 @@ trait AsyncSetup {
     }
   }
 
+  trait SetupNonBlockingCacheError extends Setup {
+    val form = InputForm("Example Data", 23)
+    override val testSessionId="TestIdSetupCacheError"
+
+    override val cache = new Cache[TaskCache] {
+      var bodyCache:Option[TaskCache] = None
+
+      def put(id:String, value:TaskCache)(implicit hc:HeaderCarrier):Future[Unit] = {
+        Future.failed(new Exception("Controlled explosion!"))
+      }
+
+      def get(id:String)(implicit hc:HeaderCarrier):Future[Option[TaskCache]] = {
+        Future.failed(new Exception("Should not be called"))
+      }
+    }
+
+    override lazy val controller  : ExampleAsyncController = new ControllerUnderTest {
+      override def getName = testSessionId
+      override def buildUniqueId() = testSessionId
+    }
+  }
+
   trait SetupBlockingError extends SetupNonBlockingError {
     override val testSessionId="TestIdBlockingError"
 

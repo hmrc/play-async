@@ -52,9 +52,8 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
                         // page once the Future is sent off-line. If the value is true, the user will block for a configurable period of time and then
                         // check if the task has completed. This mode is used to not display the poll page if the Future completes within the configurable time.
 
-  private type callbackSuccessType = OUTPUT => String => Future[Result]
-  private type callbackWithStatusType = Int => Option[String] => Future[Result]
-
+  type callbackSuccessType = OUTPUT => String => Future[Result]
+  type callbackWithStatusType = Int => Option[String] => Future[Result]
 
   // Function wrapper for request actions which need to be aware of an executing async task. Used to route the user back to the poll view if an async task is currently executing.
   // NOTE: The action wrapper is lightweight and only session is check for the existence of a running task!
@@ -102,7 +101,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
    * @param callbackStatus  - Invoked when the client is responsible for rendering the display based on a status. This could be timeout, error...
    * @return - Future[Result]
    */
-  def pollTask(route:Call, callback:callbackSuccessType, callbackStatus:callbackWithStatusType)(implicit request:Request[AnyContent], hc:HeaderCarrier) = checkTaskStatus(route, callback, callbackStatus)
+  def pollTask(route:Call, callback:OUTPUT => String => Future[Result], callbackStatus:callbackWithStatusType)(implicit request:Request[AnyContent], hc:HeaderCarrier) = checkTaskStatus(route, callback, callbackStatus)
 
   /**
    * Function used in async blocking mode to not display the polling page when async task completes within expected wait period.
@@ -156,18 +155,26 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
 
         def createAsyncTask(): Future[Result] = {
           Logger.info(wrap(s"New task generated [$ident]."))
-          // Send future function to Actor for processing.
-          actorRef ! AsyncMessage(ident, futureFunction, outputToString, Some(headerCarrier), DateTimeUtils.now.getMillis)
-          // Update session state and route to the poll view.
-          callbackWithStatus(ViewCodes.Polling)(Some(ident)).map(res => res.withSession(res.session.copy(data = buildSessionWithMVCSessionId(id,uniqueId, res.session.data))))
+          val task = TaskCache(ident, StatusCodes.Running, None, DateTimeUtils.now.getMillis, 0)
+
+          def sendMessage = {
+            actorRef ! AsyncMessage(ident, futureFunction, outputToString, Some(headerCarrier), DateTimeUtils.now.getMillis)
+            Future.successful(Unit)
+          }
+
+          for {
+            _ <- taskCache.put(ident, task)
+            _ <- sendMessage
+            res <- callbackWithStatus(ViewCodes.Polling)(Some(ident))
+          } yield { res.withSession(res.session.copy(data = buildSessionWithMVCSessionId(id, uniqueId, res.session.data))) }
         }
 
-        val result = createAsyncTask()
+        val result: Future[Result] = createAsyncTask()
 
         if (waitMode) {
           // Note: The above Future result is ignored in blocking mode.
           // First, user must be redirected in order to force the storing of the Task-Id within the session/Cookie! This is required to stop replays while in wait mode.
-          Future.successful(Redirect(waitForAsync).withSession(session.copy(data = buildSessionWithMVCSessionId(id,uniqueId, session.data)(request))))
+          Future.successful(Redirect(waitForAsync).withSession(session.copy(data = buildSessionWithMVCSessionId(id, uniqueId, session.data)(request))))
         } else {
           // Return the poll response.
           result
@@ -259,6 +266,7 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
   private def removeAsyncKeyFromSession(result:Future[Result])(implicit request: Request[AnyContent]): Future[Result] = {
     result.map(res => res.withSession(res.session.copy(data = clearASyncIdFromSession(res.session.data))))
   }
+
   private def throttleUp(callbackWithStatus:callbackWithStatusType)(func: => Future[Result])(implicit request:Request[AnyContent]): Future[Result] = {
     
     if (Throttle.current != -1 && Throttle.current >= throttleLimit)  {
@@ -266,7 +274,20 @@ trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncV
       removeAsyncKeyFromSession(callbackWithStatus(ViewCodes.ThrottleReached)(None))
     } else {
       Throttle.up()
-      func
+      Logger.info(wrap(s"Current Throttle limit [$throttleLimit] - Current Throttle [${Throttle.current}]"))
+      val outcome = func.map(resp => Some(resp)).recover {
+        case ex: Exception =>
+          Logger.error(wrap(s"Failed to offline the task and failure is $ex"))
+          None
+      }
+
+      outcome.flatMap {
+        case Some(response) => Future.successful(response)
+        case _ =>
+          // Failure saving the task to cache. Decrease throttle and return error status.
+          Throttle.down()
+          callbackWithStatus(ViewCodes.Error)(None)
+      }
     }
   }
 
