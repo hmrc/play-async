@@ -70,26 +70,21 @@ trait AsyncTask[OUTPUT] extends LogWrapper {
       case unknown @ _  => Logger.info(wrap(s"Unknown message received! $unknown"))
     }
 
-    private def processMessage(asyncTask:AsyncMessage)(implicit headerCarrier: HeaderCarrier, sessionCache: Cache[TaskCache]): Future[Unit] = {
+    private def processMessage(asyncTask:AsyncMessage)(implicit headerCarrier: HeaderCarrier, sessionCache: Cache[TaskCache]): Unit = {
       Logger.info(wrap(s"Picked up a new async task with Id [${asyncTask.id}]"))
 
       val timeout = DateTimeUtils.now.getMillis > (asyncTask.startTime + clientTimeout)
-      // Define the task to be stored to cache. Check if the client has timed out already waiting for the task, no point starting if no client!
+      // Check if the client has timed out already waiting for the task, no point starting if no client!
       val status = if (timeout) StatusCodes.Timeout else StatusCodes.Running
       val task = TaskCache(asyncTask.id, status, None, asyncTask.startTime, if (timeout) DateTimeUtils.now.getMillis else 0)
-
-      // Store the task into cache for other servers in the cluster to resolve the identifier, then execute the task.
-      // If cache fails then caller will eventually route to timeout!
-      sessionCache.put(asyncTask.id, task).map(saved => invokeAsyncTaskFuture(asyncTask, task)).recover {
-        case e: Exception => Logger.error(wrap(s"processMessage: Failed to save the task to cache! Task Id [${asyncTask.id}]. Exception $e"))
-      }
+      invokeAsyncTaskFuture(asyncTask, task)
     }
 
     private def invokeAsyncTaskFuture(asyncMessage:AsyncMessage, task:TaskCache)(implicit hc:HeaderCarrier, sessionCache: Cache[TaskCache]) : Unit = {
       Logger.info(wrap(s"Invoking Future for Id [${asyncMessage.id}]"))
 
       val time = DateTimeUtils.now.getMillis
-      decreaseThrottle(asyncMessage,task) {
+      decreaseThrottle(asyncMessage, task) {
         asyncMessage.invokeAsyncFunction(time)
       }
     }
@@ -100,7 +95,7 @@ trait AsyncTask[OUTPUT] extends LogWrapper {
       sessionCache.put(asyncTask.id, asyncTask.copy(status=StatusCodes.Error, complete=DateTimeUtils.now.getMillis)).recover {
         case e: Exception =>
           Logger.error(wrap(s"saveError: Failed to save the task error status to cache! Task Id [${asyncTask.id}]. Exception $e"))
-          throw new Exception("Failed to save to keystore!")
+          throw new Exception("Failed to save to cache!")
       }
     }
 

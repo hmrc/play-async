@@ -53,13 +53,13 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
     "poll for the server side request to complete within the expected time window, on timeout the timeout page is returned - SUBMIT -> REDIRECT -> WAIT -> TIMEOUT-PAGE" in new SetupBlockingTimeout {
 
       invokeTestBlockAction(form, controller, ident,
-        s"""<p>The request has timed out!</p>""", 3000, Interval(Span(100, Milliseconds)))
+        s"<p>The request has timed out!</p>", 3000, Interval(Span(100, Milliseconds)))
     }
 
     "poll for the server side request to complete, the server-side request generates an exception, the error page is returned - SUBMIT -> REDIRECT -> WAIT -> ERROR-PAGE " in new SetupBlockingError {
 
       invokeTestBlockAction(form, controller, ident,
-        s"""<p>An error occurred processing the request!</p>""", 2000)
+        s"<p>An error occurred processing the request!</p>", 2000)
     }
 
     "not submit the server side request for async processing when the throttle is exceeded, the throttle limit page is returned - SUBMIT -> THROTTLE-PAGE " in new SetupBlockingThrottle {
@@ -73,6 +73,19 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
       result.session.get(controller.testUpdateSessionValue) shouldBe None
     }
 
+  }
+
+  "Invoking the controller to offline the task should " should {
+
+    "return an error status response when the task failed to be stored to the cache" in new SetupNonBlockingCacheError {
+      val result = invokeAsyncControllerFunction(form, controller)
+      status(result) shouldBe 200
+      bodyOf(result) should include regex "<p>An error occurred processing the request!</p>"
+
+      eventually(Timeout(Span(10000, Milliseconds)), Interval(Span(2, Seconds))) {
+        uk.gov.hmrc.play.asyncmvc.async.Throttle.current shouldBe 0
+      }
+    }
   }
 
   // This mode will not block on the server waiting for the async task to complete, and the polling page will be returned immediately.
@@ -120,7 +133,7 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
 
   }
 
-  "Simulating concurrent http requests through the async framework with variable connector service delays " should {
+  "Executing concurrent http requests through the async framework with variable connector service delays " should {
 
       "successfully process all concurrent requests and once all tasks are complete, verify the throttle value is 0" in {
         val time=System.currentTimeMillis()
@@ -143,7 +156,7 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
             val ident = s"${ExampleAsyncController.id}-${asyncTestRequest.testSessionId}"
 
             invokeTestBlockAction(asyncTestRequest.form, asyncTestRequest.controller, ident,
-              s"""<p>The task has completed successfully. Id of the form value originally submitted is ${asyncTestRequest.form.id}.0 </p>""", 90000)
+              s"<p>The task has completed successfully. Id of the form value originally submitted is ${asyncTestRequest.form.id}.0 </p>", 90000)
            })
         }
 
@@ -151,8 +164,9 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
           await(Future.sequence(result))
         }
 
-        uk.gov.hmrc.play.asyncmvc.async.Throttle.current shouldBe 0
-
+        eventually(Timeout(Span(95000, Milliseconds)), Interval(Span(2, Seconds))) {
+          uk.gov.hmrc.play.asyncmvc.async.Throttle.current shouldBe 0
+        }
        println("Time spent processing... " + (System.currentTimeMillis()-time))
       }
 
@@ -164,7 +178,6 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
       invokeTestNonBlockActionAndPollAgainstInvalidController(form, controller, ident, "some-url-for-id-example2")
     }
   }
-
 
   def invokeTestNonBlockActionAndPollAgainstInvalidController(form:InputForm, controller:ExampleAsyncController, testSessionId:String, response:String)(implicit request:Request[AnyContent]) = {
     val result1 = invokeAsyncControllerFunction(form, controller)
@@ -205,6 +218,11 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
       // Verify the callback can update session.
       result2.session.get(controller.testUpdateSessionValue) shouldBe Some(sessionTestValue)
     }
+
+    eventually(Timeout(Span(6, Seconds))) {
+      uk.gov.hmrc.play.asyncmvc.async.Throttle.current shouldBe 0
+    }
+
   }
 
   def invokeTestBlockAction(form:InputForm, controller:ExampleAsyncController, testSessionId:String, response:String, timeToWait:Int, interval : Interval = Interval(Span(3, Seconds)))(implicit request:Request[AnyContent]) = {
@@ -220,10 +238,11 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
     eventually(Timeout(Span(timeToWait, Milliseconds)), interval) {
       val resultPoll: Result = await(controller.poll()(requestWithSession))
       status(resultPoll) shouldBe 200
-      bodyOf(resultPoll) should include regex response
 
+      bodyOf(resultPoll) should include regex response
       resultPoll.session.get(controller.AsyncMVCSessionId) shouldBe None
     }
+
   }
 
   def invokeASyncWrapper(form:InputForm, controller:ExampleAsyncController, testSessionId:String, response:String)(implicit request:Request[AnyContent]) = {
@@ -245,6 +264,11 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
       status(resultPollInner) shouldBe 200
       bodyOf(resultPollInner) should include regex response
     }
+
+    eventually(Timeout(Span(7000, Millis))) {
+      uk.gov.hmrc.play.asyncmvc.async.Throttle.current shouldBe 0
+    }
+
   }
 
   def invokeAsyncControllerFunction(form:InputForm, controller:ExampleAsyncController)(implicit request:Request[AnyContent]) = {
