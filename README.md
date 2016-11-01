@@ -54,7 +54,7 @@ trait ExampleNormalController extends Controller {
     implicit request =>
       implicit val hc=HeaderCarrier.fromHeadersAndSession(request.headers)
       stockConnector.getStock(1L).map { response =>
-        Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.complete(response))
+        Ok(views.html.complete(response))
       }
   }
 }
@@ -79,15 +79,15 @@ trait ExampleNormalController extends Controller with AsyncMvcIntegration {
 
   def asyncUICallback(stock:Stock)(implicit request:Request[AnyContent]) : Future[Result] = {
     val json=stock.asInstanceOf[Stock]
-    Future.successful(Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.complete(json)))
+    Future.successful(Ok(views.html.complete(json)))
   }
 
   def asyncUICallbackWithStatus(status:Int)(implicit request:Request[AnyContent]) : Future[Result] = {
     val res = status match {
-      case ViewCodes.Timeout => Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.timeout.apply())
-      case ViewCodes.Polling => Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.polling.apply())
-      case ViewCodes.ThrottleReached => Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.throttle_limit_reached.apply())
-      case ViewCodes.Error | _ => Ok(uk.gov.hmrc.play.asyncmvc.example.views.html.error.apply())
+      case ViewCodes.Timeout => Ok(views.html.timeout.apply())
+      case ViewCodes.Polling => Ok(views.html.polling.apply())
+      case ViewCodes.ThrottleReached => Ok(views.html.throttle_limit_reached.apply())
+      case ViewCodes.Error | _ => Ok(views.html.error.apply())
     }
     Future.successful(res)
   }
