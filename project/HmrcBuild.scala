@@ -27,7 +27,6 @@ private object AppDependencies {
 
   val compile = Seq(
     "com.typesafe.play" %% "play" % PlayVersion.current % "provided",
-    "uk.gov.hmrc" %% "time" % "2.0.0" % "provided",
     "uk.gov.hmrc" %% "http-verbs" % "6.2.0" // Note: Only the HeaderCarrier is used from this library.
   )
 
