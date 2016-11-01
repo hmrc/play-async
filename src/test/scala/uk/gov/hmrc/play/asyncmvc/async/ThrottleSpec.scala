@@ -32,7 +32,5 @@ class ThrottleSpec extends UnitSpec with ScalaFutures with Eventually {
       Throttle.down()
       Throttle.current shouldBe 0
     }
-
   }
-
 }

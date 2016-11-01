@@ -127,16 +127,6 @@ resolvers += Resolver.bintrayRepo("hmrc", "releases")
 libraryDependencies += "uk.gov.hmrc" %% "play-async" % "[INSERT-VERSION]"
 ```
 
-## Configuration
-
-In `/conf/play.plugins` add the reference to `PlayAsyncPlugin`
-
-```scala
-    5000:uk.gov.hmrc.play.asyncmvc.plugin.PlayAsyncPlugin
-```
-
-*Note: If 5000 is already in use choose another number*
-
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html").
