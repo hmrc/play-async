@@ -23,11 +23,10 @@ object HmrcBuild extends Build {
 }
 
 private object AppDependencies {
-  import play.core.PlayVersion
 
   val compile = Seq(
-    "com.typesafe.play" %% "play" % PlayVersion.current % "provided",
-    "uk.gov.hmrc" %% "http-verbs" % "6.3.0" // Note: Only the HeaderCarrier is used from this library.
+    "com.typesafe.play" %% "play" % "2.5.12" % "provided",
+    "uk.gov.hmrc" %% "http-core" % "0.5.0" // Note: Only the HeaderCarrier is used from this library.
   )
 
   val testScope: String = "test"

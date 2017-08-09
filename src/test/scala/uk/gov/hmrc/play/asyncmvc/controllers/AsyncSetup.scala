@@ -23,10 +23,10 @@ import uk.gov.hmrc.play.asyncmvc.example.connectors.{Stock, StockConnector}
 import uk.gov.hmrc.play.asyncmvc.example.controllers.{ExampleAsyncController, InputForm}
 import uk.gov.hmrc.play.asyncmvc.model.TaskCache
 import play.api.test.FakeRequest
-import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import uk.gov.hmrc.http.HeaderCarrier
 
 trait AsyncSetup {
 
