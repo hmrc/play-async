@@ -20,9 +20,9 @@ import akka.actor.Actor
 import uk.gov.hmrc.play.asyncmvc.model.{TaskCache, StatusCodes}
 import play.api.Logger
 import uk.gov.hmrc.time.DateTimeUtils
-import uk.gov.hmrc.play.http.HeaderCarrier
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import uk.gov.hmrc.http.HeaderCarrier
 
 /**
  * The AsyncTask is responsible for processing an AsyncMVCAsyncActor message, where is message encapsulates a Future to be processed.
@@ -30,7 +30,7 @@ import scala.concurrent.Future
  */
 trait AsyncTask[OUTPUT] extends LogWrapper {
 
-  /**
+  /**                               
    * Object encapsulates the message handling and the definition of the Akka message.
    */
   object AsyncMVCAsyncActor {

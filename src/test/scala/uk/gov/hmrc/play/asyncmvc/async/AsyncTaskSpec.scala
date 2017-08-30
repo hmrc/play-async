@@ -24,7 +24,6 @@ import play.api.mvc.Controller
 import uk.gov.hmrc.play.asyncmvc.controllers.FakePlayApplication
 import uk.gov.hmrc.play.asyncmvc.example.connectors.Stock
 import uk.gov.hmrc.play.asyncmvc.model.{StatusCodes, TaskCache}
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import uk.gov.hmrc.play.asyncmvc.example.controllers.AsyncMvcIntegration
@@ -32,13 +31,15 @@ import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.http
+import uk.gov.hmrc.http.HeaderCarrier
 
 
 class AsyncTaskSpec extends UnitSpec with ScalaFutures with FakePlayApplication with Eventually {
   final val oneSecond = 1000
 
   trait Setup {
-    implicit val headerCarrier = HeaderCarrier.apply()
+    implicit val headerCarrier = http.HeaderCarrier()
     val id = "asyncTaskId"
 
     class CacheStore extends Cache[TaskCache] {
