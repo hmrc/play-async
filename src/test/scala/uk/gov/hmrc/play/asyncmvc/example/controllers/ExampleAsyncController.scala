@@ -23,10 +23,10 @@ import play.twirl.api.Html
 import uk.gov.hmrc.play.asyncmvc.async.AsyncPaths
 import uk.gov.hmrc.play.asyncmvc.example.connectors.{Stock, StockConnector}
 import uk.gov.hmrc.play.asyncmvc.model.ViewCodes
-import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import uk.gov.hmrc.http.HeaderCarrier
 
 /**
 
