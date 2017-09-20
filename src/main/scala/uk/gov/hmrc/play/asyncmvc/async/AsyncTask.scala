@@ -90,7 +90,7 @@ trait AsyncTask[OUTPUT] extends LogWrapper {
     }
 
     private def saveError(asyncTask:TaskCache, e:Exception)(implicit hc:HeaderCarrier) = {
-      Logger.error(wrap(s"Task failed to process and error status recorded for Id [${asyncTask.id}]. Error [$e]"))
+      Logger.error(wrap(s"Task failed to process and error status recorded for Id [${asyncTask.id}]"), e)
       // Note: Do not wait for future!
       sessionCache.put(asyncTask.id, asyncTask.copy(status=StatusCodes.Error, complete=DateTimeUtils.now.getMillis)).recover {
         case e: Exception =>
