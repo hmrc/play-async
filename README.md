@@ -8,7 +8,7 @@ Framework disconnects the HTTP client (Browser/RestFul API) request from waiting
 
 The play-async framework provides the tools to transform a synchronous controller action into a true async controller, where the client drives the polling for the requested resource back to the server.
 
-##Background
+## Background
 
 Browser or API requests to web applications will block waiting for the request to be processed by the web application before HTML content is returned. If the web application processing the request invokes back-end systems, the maximum response time of the request is dependent on the configured socket read timeout.
 
@@ -20,7 +20,7 @@ and the application server from processing too many requests.
 
 The play-async library shields the application server from the issues detailed above. Instead of the usual approach of the client blocking and waiting for the server response, the client simply polls for the response to the requested resource from the server.
 
-##Features
+## Features
 
 The play_async_mvc library addresses the above concerns with the following features…
 
@@ -36,12 +36,12 @@ The play_async_mvc library addresses the above concerns with the following featu
 * Remove the need for long running socket connections through web-servers and firewalls.
 * Cluster friendly.
 
-##Under the hood
+## Under the hood
 
 The play-async Controller defined within an application will use an Akka Actor to process the off-line request. The clients session is used to store a unique Id which is associated with an off-line task. The status of the off-line task is stored within a cache, which is supplied through the integration of the framework. The cache is used as the central store, where async polling requests to application servers (in a cluster) will invoke to check the status of the task, and obtain the response of the processed Future.
 The HeaderCarrier associated with the original request will be carried through to the off-line request.
 
-##Code Example
+## Code Example
 
 This section demonstrates the conversion from a normal blocking Play Controller action to a play-async action.
 
@@ -112,7 +112,7 @@ The supported status codes which can be supplied to asyncUICallbackWithStatus ar
 |Error   | The task generated an error.  |
 |Throttle   | The throttle marker has been reached. Too many concurrent requests.  |
 
-##Example PlayAsync controller
+## Example PlayAsync controller
 
 uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleAsyncController	- Example async controller where the client is disconnected from the Future. The example is based on the ExampleNormalController controller where the Future and Result have been separated.
 
