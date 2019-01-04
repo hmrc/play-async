@@ -17,17 +17,17 @@
 package uk.gov.hmrc.play.asyncmvc.async
 
 import java.util.UUID
-import uk.gov.hmrc.play.asyncmvc.model.AsyncMvcSession
-import play.api.libs.json.Json
-import play.api.mvc.{Session, AnyContent, Request}
 
+import play.api.libs.json.Json
+import play.api.mvc.{AnyContent, Request}
+import uk.gov.hmrc.play.asyncmvc.model.AsyncMvcSession
 import uk.gov.hmrc.time.DateTimeUtils
 
 trait SessionHandler {
 
-  Self:AsyncValidation =>
+  Self: AsyncValidation =>
 
-  final val AsyncMVCSessionId="ASYNC_MVC_ID"
+  final val AsyncMVCSessionId = "ASYNC_MVC_ID"
 
   def getClientTimeout: Long // Return the client timeout in milliseconds. The client can only wait so long for the request before either result or timeout page is displayed.
 
@@ -35,17 +35,17 @@ trait SessionHandler {
 
   def buildUniqueId() = UUID.randomUUID().toString
 
-  def buildSession(id:String,uniqueId:String) : String = {
+  def buildSession(id: String, uniqueId: String): String = {
     implicit val format = Json.format[AsyncMvcSession]
-    val asyncMvcSession=AsyncMvcSession(id,uniqueId,DateTimeUtils.now.getMillis+getClientTimeout)
+    val asyncMvcSession = AsyncMvcSession(id, uniqueId, DateTimeUtils.now.getMillis + getClientTimeout)
     Json.stringify(Json.toJson(asyncMvcSession))
   }
 
-  def buildSessionWithMVCSessionId(id:String, uniqueId:String, data:Map[String,String])(implicit request:Request[AnyContent]): Map[String, String] = {
+  def buildSessionWithMVCSessionId(id: String, uniqueId: String, data: Map[String, String])(implicit request: Request[AnyContent]): Map[String, String] = {
     data - AsyncMVCSessionId + (AsyncMVCSessionId -> buildSession(id, uniqueId))
   }
 
-  def getSessionObject()(implicit request:Request[AnyContent]): Option[AsyncMvcSession] = {
+  def getSessionObject()(implicit request: Request[AnyContent]): Option[AsyncMvcSession] = {
     request.session.data.get(AsyncMVCSessionId) match {
       case Some(e) =>
         implicit val format = Json.format[AsyncMvcSession]

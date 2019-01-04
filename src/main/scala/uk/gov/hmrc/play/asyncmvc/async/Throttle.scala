@@ -19,9 +19,9 @@ package uk.gov.hmrc.play.asyncmvc.async
 import java.util.concurrent.atomic.AtomicLong
 
 object Throttle {
-  private var counter=new AtomicLong(0)
+  private val counter = new AtomicLong(0)
 
-  def up() = counter.getAndAdd(1)
-  def down() = counter.decrementAndGet
-  def current = counter.get()
+  def up(): Long = counter.getAndAdd(1)
+  def down(): Long = counter.decrementAndGet
+  def current: Long = counter.get()
 }

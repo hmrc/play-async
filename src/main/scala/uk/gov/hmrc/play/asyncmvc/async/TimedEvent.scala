@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.play.asyncmvc.async
 
-import java.util.Timer
-import java.util.TimerTask
+import java.util.{Timer, TimerTask}
+
 import scala.concurrent._
 
 object TimedEvent {
@@ -29,7 +29,7 @@ object TimedEvent {
     timer.schedule(new TimerTask() {
       def run() = {
         result.success(value)
-      }
+    }
     }, millis)
     result.future
   }
