@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.play.asyncmvc.async
 
-import java.util.Timer
-import java.util.TimerTask
+import java.util.{Timer, TimerTask}
+
 import scala.concurrent._
 
 object TimedEvent {
@@ -29,7 +29,7 @@ object TimedEvent {
     timer.schedule(new TimerTask() {
       def run() = {
         result.success(value)
-      }
+    }
     }, millis)
     result.future
   }

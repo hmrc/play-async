@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ package uk.gov.hmrc.play.asyncmvc.async
 import java.util.concurrent.atomic.AtomicLong
 
 object Throttle {
-  private var counter=new AtomicLong(0)
+  private val counter = new AtomicLong(0)
 
-  def up() = counter.getAndAdd(1)
-  def down() = counter.decrementAndGet
-  def current = counter.get()
+  def up(): Long = counter.getAndAdd(1)
+  def down(): Long = counter.decrementAndGet
+  def current: Long = counter.get()
 }
