@@ -7,9 +7,9 @@ lazy val library = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
   .settings(
     majorVersion := 2,
-    scalaVersion := "2.11.11",
+    scalaVersion := "2.11.12",
     makePublicallyAvailableOnBintray := true,
-    crossScalaVersions := Seq("2.11.11"),
+    crossScalaVersions := Seq("2.11.12"),
     libraryDependencies ++= AppDependencies(),
     resolvers := Seq(
       Resolver.bintrayRepo("hmrc", "releases"),
