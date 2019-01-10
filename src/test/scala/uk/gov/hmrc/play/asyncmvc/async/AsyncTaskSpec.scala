@@ -21,29 +21,27 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Millis, Span}
 import play.api.libs.json.Json
 import play.api.mvc.Controller
-import uk.gov.hmrc.play.asyncmvc.controllers.FakePlayApplication
-import uk.gov.hmrc.play.asyncmvc.example.connectors.Stock
-import uk.gov.hmrc.play.asyncmvc.model.{StatusCodes, TaskCache}
-import uk.gov.hmrc.play.test.UnitSpec
-
-import uk.gov.hmrc.play.asyncmvc.example.controllers.AsyncMvcIntegration
-import uk.gov.hmrc.time.DateTimeUtils
-
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.http
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.asyncmvc.{UnitSpec, WithFakeApplication}
+import uk.gov.hmrc.play.asyncmvc.example.connectors.Stock
+import uk.gov.hmrc.play.asyncmvc.example.controllers.AsyncMvcIntegration
+import uk.gov.hmrc.play.asyncmvc.model.{StatusCodes, TaskCache}
+import uk.gov.hmrc.time.DateTimeUtils
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 
-class AsyncTaskSpec extends UnitSpec with ScalaFutures with FakePlayApplication with Eventually {
+class AsyncTaskSpec extends UnitSpec with ScalaFutures with WithFakeApplication with Eventually {
   final val oneSecond = 1000
 
   trait Setup {
-    implicit val headerCarrier = http.HeaderCarrier()
+    implicit val headerCarrier: HeaderCarrier = http.HeaderCarrier()
     val id = "asyncTaskId"
 
     class CacheStore extends Cache[TaskCache] {
-      var store:Option[TaskCache] = None
+      var store: Option[TaskCache] = None
 
       override def put(id: String, value: TaskCache)(implicit hc: HeaderCarrier): Future[Unit] = {
         store = Some(value)
@@ -55,25 +53,25 @@ class AsyncTaskSpec extends UnitSpec with ScalaFutures with FakePlayApplication 
       }
     }
 
-    class Example(testId:String) extends Controller with AsyncMvcIntegration {
+    class Example(testId: String) extends Controller with AsyncMvcIntegration {
       val cache = new CacheStore
 
-      override val actorName = testId
+      override val actorName: String = testId
       override def taskCache: Cache[TaskCache] = cache
 
       import AsyncMVCAsyncActor.AsyncMessage
 
-      def sendMessage(futureFunction: HeaderCarrier => Future[Stock], time:Long) = {
+      def sendMessage(futureFunction: HeaderCarrier => Future[Stock], time: Long): Unit = {
         asyncTask.actorRef ! AsyncMessage(id, futureFunction, outputToString, Some(headerCarrier), time)
       }
     }
 
-    val actorName:String
+    val actorName: String
     lazy val asyncTask = new Example(actorName)
     val stock = Stock("id", 2.2)
 
 
-    def test(futureFunction: HeaderCarrier => Future[Stock], time:Long = DateTimeUtils.now.getMillis)(test: => Unit) = {
+    def test(futureFunction: HeaderCarrier => Future[Stock], time: Long = DateTimeUtils.now.getMillis)(test: => Unit): Unit = {
       Throttle.up()
       asyncTask.sendMessage(futureFunction, time)
       await(test)
@@ -100,7 +98,7 @@ class AsyncTaskSpec extends UnitSpec with ScalaFutures with FakePlayApplication 
 
     "return Complete state when the off-line future completes successfully" in new Complete {
       // Note: Future has 1 second delay time, reason for 2 second delay in eventually.
-      def success(hc: HeaderCarrier) = Future.successful(TimedEvent.delayedSuccess(oneSecond, 0).map(_ => stock))
+      def success(hc: HeaderCarrier): Future[Future[Stock]] = Future.successful(TimedEvent.delayedSuccess(oneSecond, 0).map(_ => stock))
 
       test(success) {
         eventually(Timeout(Span(oneSecond * 2, Millis))) {
@@ -114,7 +112,7 @@ class AsyncTaskSpec extends UnitSpec with ScalaFutures with FakePlayApplication 
     }
 
     "return Error state when the off-line future returns Future.failed" in new Error {
-      def error(hc:HeaderCarrier) = Future.successful(Future.failed(new IllegalArgumentException("controlled explosion!")))
+      def error(hc: HeaderCarrier) = Future.successful(Future.failed(new IllegalArgumentException("controlled explosion!")))
 
       test(error) {
         eventually(Timeout(Span(oneSecond, Millis))) {
@@ -140,7 +138,7 @@ class AsyncTaskSpec extends UnitSpec with ScalaFutures with FakePlayApplication 
     }
 
     "return Error state when the off-line future throws an exception" in new ErrorException {
-      def error(hc:HeaderCarrier) = throw new scala.IllegalArgumentException("Controlled Explosion!")
+      def error(hc: HeaderCarrier) = throw new scala.IllegalArgumentException("Controlled Explosion!")
 
       test(error) {
         eventually(Timeout(Span(oneSecond, Millis))) {
