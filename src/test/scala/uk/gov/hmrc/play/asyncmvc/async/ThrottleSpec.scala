@@ -17,7 +17,7 @@
 package uk.gov.hmrc.play.asyncmvc.async
 
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.play.asyncmvc.UnitSpec
 
 class ThrottleSpec extends UnitSpec with ScalaFutures with Eventually {
 

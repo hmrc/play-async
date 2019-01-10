@@ -1,3 +1,4 @@
+import PlayCrossCompilation._
 import uk.gov.hmrc.SbtArtifactory
 import uk.gov.hmrc.versioning.SbtGitVersioning
 
@@ -35,5 +36,6 @@ lazy val library = (project in file("."))
       "-Ywarn-unused-import",
       //"-Xfatal-warnings", - there are some discarded non-unit values and implicit numeric widenings that need work to eliminate
       "-Xlint"
-    )
+    ),
+    playCrossCompilationSettings
   )

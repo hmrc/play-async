@@ -18,28 +18,21 @@ package uk.gov.hmrc.play.asyncmvc.controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.scalatest.Suite
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
 import play.api.libs.json.Json
 import play.api.mvc._
-import play.api.test.{FakeApplication, FakeRequest}
+import play.api.test._
 import uk.gov.hmrc.play.asyncmvc.async.TimedEvent
 import uk.gov.hmrc.play.asyncmvc.example.controllers.{AsyncMap, ExampleAsyncController, InputForm}
 import uk.gov.hmrc.play.asyncmvc.model.AsyncMvcSession
-import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
+import uk.gov.hmrc.play.asyncmvc.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-trait FakePlayApplication extends WithFakeApplication {
-  this: Suite =>
-
-  override lazy val fakeApplication = FakeApplication()
-}
-
-class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplication with ScalaFutures with Eventually {
+class AsyncControllerSpec extends AsyncSetup with UnitSpec with WithFakeApplication with ScalaFutures with Eventually {
 
   // Blocking mode will block the client, waiting for off-line task to be processed. This mode basically saves the Polling page from being presented to the user!
   // The Polling page does not necessarily need to be returned in this mode if the server side request completes within the expected time window!
@@ -47,19 +40,22 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
 
     "poll for the server side request to complete successfully and the success page returned - SUBMIT -> REDIRECT -> WAIT -> COMPLETE-PAGE" in new Blocking {
 
-      invokeTestBlockAction(form, controller, ident,
+      invokeTestBlockAction(
+        form, controller, ident,
         s"""<p>The task has completed successfully. Id of the form value originally submitted is ${form.id}.0 </p>""", 0)
     }
 
     "poll for the server side request to complete within the expected time window, on timeout the timeout page is returned - SUBMIT -> REDIRECT -> WAIT -> TIMEOUT-PAGE" in new SetupBlockingTimeout {
 
-      invokeTestBlockAction(form, controller, ident,
+      invokeTestBlockAction(
+        form, controller, ident,
         s"<p>The request has timed out!</p>", 3000, Interval(Span(100, Milliseconds)))
     }
 
     "poll for the server side request to complete, the server-side request generates an exception, the error page is returned - SUBMIT -> REDIRECT -> WAIT -> ERROR-PAGE " in new SetupBlockingError {
 
-      invokeTestBlockAction(form, controller, ident,
+      invokeTestBlockAction(
+        form, controller, ident,
         s"<p>An error occurred processing the request!</p>", 2000)
     }
 
@@ -93,18 +89,21 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
   "in async non-blocking mode, disconnect the HTTP client from the server side request and poll for the task to complete " should {
 
     "poll for the server side request to complete successfully and the success page is returned - SUBMIT -> POLL -> COMPLETE-PAGE" in new SetupNonBlocking {
-      invokeTestNonBlockAction(form, controller, ident,
+      invokeTestNonBlockAction(
+        form, controller, ident,
         s"""<p>The task has completed successfully. Id of the form value originally submitted is ${form.id}.0 </p>""", "SUCCESS")
     }
 
     "poll for the server side request to complete within the expected time window, on timeout the timeout page is returned - SUBMIT -> POLL -> TIMEOUT-PAGE" in new SetupNonBlockingTimeout {
-      invokeTestNonBlockAction(form, controller, ident,
+      invokeTestNonBlockAction(
+        form, controller, ident,
         s"""<p>The request has timed out!</p>""", "TIMEOUT")
     }
 
     "poll for the server side request to complete, the server-side request generates an exception, the error page is returned - SUBMIT -> POLL -> ERROR-PAGE " in new SetupNonBlockingError {
 
-      invokeTestNonBlockAction(form, controller, ident,
+      invokeTestNonBlockAction(
+        form, controller, ident,
         s"""<p>An error occurred processing the request!</p>""", "ERROR")
     }
 
@@ -126,9 +125,10 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
     }
 
     "not display the requested page and force the user request to the poll page when an async task is running" in new SetupBlocking {
-      override val testSessionId="TestIdAsyncWrapper"
+      override val testSessionId = "TestIdAsyncWrapper"
 
-      invokeASyncWrapper(form, controller, ident,
+      invokeASyncWrapper(
+        form, controller, ident,
         s"""<p>The task has completed successfully. Id of the form value originally submitted is ${form.id}.0 </p>""")
     }
 
@@ -136,40 +136,42 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
 
   "Executing concurrent http requests through the async framework with variable connector service delays " should {
 
-      "successfully process all concurrent requests and once all tasks are complete, verify the throttle value is 0" in {
-        val time=System.currentTimeMillis()
+    "successfully process all concurrent requests and once all tasks are complete, verify the throttle value is 0" in {
+      val time = System.currentTimeMillis()
 
-        val concurrentRequests = (0 until 15).foldLeft(Seq.empty[SetupConcurrencyDynamicBlocking]) {
-          (list, counter) => {
-            val asyncRequest = new SetupConcurrencyDynamicBlocking {
-              override val testSessionId=s"TestIdConcurrent$counter"
-              override val form = InputForm("Example Data", counter)
-            }
-            list ++ Seq(asyncRequest)
+      val concurrentRequests = (0 until 15).foldLeft(Seq.empty[SetupConcurrencyDynamicBlocking]) {
+        (list, counter) => {
+          val asyncRequest = new SetupConcurrencyDynamicBlocking {
+            override val testSessionId = s"TestIdConcurrent$counter"
+            override val form          = InputForm("Example Data", counter)
           }
+          list ++ Seq(asyncRequest)
         }
+      }
 
-        val result = concurrentRequests.map { asyncTestRequest =>
+      val result = concurrentRequests.map { asyncTestRequest =>
 
-          val delay = scala.util.Random.nextInt(50)
-          TimedEvent.delayedSuccess(delay, 0).map(a => {
+        val delay = scala.util.Random.nextInt(50)
+        TimedEvent.delayedSuccess(delay, 0).map(
+          a => {
             implicit val reqImpl = asyncTestRequest.req
             val ident = s"Example-${asyncTestRequest.testSessionId}"
 
-            invokeTestBlockAction(asyncTestRequest.form, asyncTestRequest.controller, ident,
+            invokeTestBlockAction(
+              asyncTestRequest.form, asyncTestRequest.controller, ident,
               s"<p>The task has completed successfully. Id of the form value originally submitted is ${asyncTestRequest.form.id}.0 </p>", 90000)
-           })
-        }
-
-        eventually(Timeout(Span(95000, Milliseconds)), Interval(Span(2, Seconds))) {
-          await(Future.sequence(result))
-        }
-
-        eventually(Timeout(Span(95000, Milliseconds)), Interval(Span(2, Seconds))) {
-          uk.gov.hmrc.play.asyncmvc.async.Throttle.current shouldBe 0
-        }
-       println("Time spent processing... " + (System.currentTimeMillis()-time))
+          })
       }
+
+      eventually(Timeout(Span(95000, Milliseconds)), Interval(Span(2, Seconds))) {
+        await(Future.sequence(result))
+      }
+
+      eventually(Timeout(Span(95000, Milliseconds)), Interval(Span(2, Seconds))) {
+        uk.gov.hmrc.play.asyncmvc.async.Throttle.current shouldBe 0
+      }
+      println("Time spent processing... " + (System.currentTimeMillis() - time))
+    }
 
   }
 
@@ -180,17 +182,17 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
     }
   }
 
-  def invokeTestNonBlockActionAndPollAgainstInvalidController(form:InputForm, controller:ExampleAsyncController, testSessionId:String, response:String)(implicit request:Request[AnyContent]) = {
+  def invokeTestNonBlockActionAndPollAgainstInvalidController(form: InputForm, controller: ExampleAsyncController, testSessionId: String, response: String)(implicit request: Request[AnyContent]) = {
     val result1 = invokeAsyncControllerFunction(form, controller)
     status(result1) shouldBe 200
     bodyOf(result1) should include regex s"""<p>Polling...please wait for task to complete.</p>"""
 
     val session = result1.session.get(controller.AsyncMVCSessionId)
-    val jsonSession=Json.parse(session.get).as[AsyncMvcSession]
+    val jsonSession = Json.parse(session.get).as[AsyncMvcSession]
     jsonSession.id shouldBe testSessionId
 
     // Note: The session is re-created with an Id that is not associated with ExampleAsyncController.
-    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession(AsyncMap.id2,testSessionId))
+    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession(AsyncMap.id2, testSessionId))
 
     // Invoke the async controller with the modified session.
     val result2: Result = await(controller.poll()(requestWithSession))
@@ -198,16 +200,16 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
     result2.header.headers.get("Location") shouldBe Some(response)
   }
 
-  def invokeTestNonBlockAction(form:InputForm, controller:ExampleAsyncController, testSessionId:String, response:String, sessionTestValue:String)(implicit request:Request[AnyContent]) = {
+  def invokeTestNonBlockAction(form: InputForm, controller: ExampleAsyncController, testSessionId: String, response: String, sessionTestValue: String)(implicit request: Request[AnyContent]) = {
     val result1 = invokeAsyncControllerFunction(form, controller)
     status(result1) shouldBe 200
     bodyOf(result1) should include regex s"""<p>Polling...please wait for task to complete.</p>"""
 
     val session = result1.session.get(controller.AsyncMVCSessionId)
-    val jsonSession=Json.parse(session.get).as[AsyncMvcSession]
+    val jsonSession = Json.parse(session.get).as[AsyncMvcSession]
     jsonSession.id shouldBe testSessionId
 
-    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession("Example",testSessionId))
+    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession("Example", testSessionId))
 
     eventually(Timeout(Span(6, Seconds))) {
       val result2: Result = await(controller.poll()(requestWithSession))
@@ -226,18 +228,18 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
 
   }
 
-  implicit val system = ActorSystem()
+  implicit val system       = ActorSystem()
   implicit val materializer = ActorMaterializer()
 
-  def invokeTestBlockAction(form:InputForm, controller:ExampleAsyncController, testSessionId:String, response:String, timeToWait:Int, interval : Interval = Interval(Span(3, Seconds)))(implicit request:Request[AnyContent]) = {
+  def invokeTestBlockAction(form: InputForm, controller: ExampleAsyncController, testSessionId: String, response: String, timeToWait: Int, interval: Interval = Interval(Span(3, Seconds)))(implicit request: Request[AnyContent]) = {
     val result = invokeAsyncControllerFunction(form, controller)
     status(result) shouldBe 303
     result.header.headers.get("Location") shouldBe Some("/wait")
 
-    val sessionObject = Json.parse(result.session.data.get(controller.AsyncMVCSessionId).get).as[AsyncMvcSession]
+    val sessionObject = Json.parse(result.session.data(controller.AsyncMVCSessionId)).as[AsyncMvcSession]
     sessionObject.id shouldBe testSessionId
 
-    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession("Example",testSessionId))
+    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession("Example", testSessionId))
 
     eventually(Timeout(Span(timeToWait, Milliseconds)), interval) {
       val resultPoll: Result = await(controller.poll()(requestWithSession))
@@ -249,15 +251,15 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
 
   }
 
-  def invokeASyncWrapper(form:InputForm, controller:ExampleAsyncController, testSessionId:String, response:String)(implicit request:Request[AnyContent]) = {
+  def invokeASyncWrapper(form: InputForm, controller: ExampleAsyncController, testSessionId: String, response: String)(implicit request: Request[AnyContent]) = {
     val result: Result = invokeAsyncControllerFunction(form, controller)
     status(result) shouldBe 303
     result.header.headers.get("Location") shouldBe Some("/wait")
 
-    val sessionObject = Json.parse(result.session.data.get(controller.AsyncMVCSessionId).get).as[AsyncMvcSession]
+    val sessionObject = Json.parse(result.session.data(controller.AsyncMVCSessionId)).as[AsyncMvcSession]
     sessionObject.id shouldBe testSessionId
 
-    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession("Example",testSessionId))
+    val requestWithSession = FakeRequest().withSession(controller.AsyncMVCSessionId -> controller.buildSession("Example", testSessionId))
     val resultPoll = await(controller.captureController()(requestWithSession))
 
     status(resultPoll) shouldBe 200
@@ -275,8 +277,8 @@ class AsyncControllerSpec extends AsyncSetup with UnitSpec with FakePlayApplicat
 
   }
 
-  def invokeAsyncControllerFunction(form:InputForm, controller:ExampleAsyncController)(implicit request:Request[AnyContent]) = {
-    val request = FakeRequest().withFormUrlEncodedBody("message" -> form.message, "id" -> (form.id+""))
+  def invokeAsyncControllerFunction(form: InputForm, controller: ExampleAsyncController)(implicit request: Request[AnyContent]) = {
+    val request = FakeRequest().withFormUrlEncodedBody("message" -> form.message, "id" -> (form.id + ""))
     await(controller.submitController()(request))
   }
 

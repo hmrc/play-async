@@ -16,43 +16,41 @@
 
 package uk.gov.hmrc.play.asyncmvc.example.controllers
 
-import akka.actor.{ActorRef, Props}
-import uk.gov.hmrc.play.asyncmvc.async.AsyncMVC
+import akka.actor.{ActorRef, ActorSystem, Props}
+import play.api.libs.json.{Json, OFormat}
+import play.api.mvc._
+import uk.gov.hmrc.play.asyncmvc.async.{AsyncMVC, AsyncPaths}
 import uk.gov.hmrc.play.asyncmvc.example.connectors.Stock
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
-import play.api.libs.json.Json
-import play.api.mvc.{Call, AnyContent, Request, Controller}
 
 trait AsyncMvcIntegration extends AsyncMVC[Stock] {
 
-  self:Controller =>
+  self: Controller =>
 
   val actorName = "async_mvc_actor"
   override def id = "Example"
-  override def asyncPaths(implicit request:Request[AnyContent]) = AsyncMap.applicationAsyncControllers
+  override def asyncPaths(implicit request: Request[AnyContent]): Seq[AsyncPaths] = AsyncMap.applicationAsyncControllers
 
   // Convert the stock object to String.
-  override def outputToString(in:Stock): String = {
-    implicit val format = Json.format[Stock]
+  override def outputToString(in: Stock): String = {
+    implicit val format: OFormat[Stock] = Json.format
     Json.stringify(Json.toJson(in))
   }
 
   // Convert the String to stock object representation.
-  override def convertToJSONType(in:String) : Stock = {
-    val json=Json.parse(in)
-    val stock=json.asOpt[Stock]
+  override def convertToJSONType(in: String): Stock = {
+    val json = Json.parse(in)
+    val stock = json.asOpt[Stock]
     stock.getOrElse(throw new Exception("Failed to resolve the object!"))
   }
 
-  override def       waitForAsync = Call("GET","/wait")
-  override def      throttleLimit = 300
-  override def  blockingDelayTime = 3000
+  override def waitForAsync = Call("GET", "/wait")
+  override def throttleLimit = 300
+  override def blockingDelayTime = 3000
 
-  final val CLIENT_TIMEOUT=8000L
+  final val CLIENT_TIMEOUT = 8000L
 
-  lazy val asyncActor: ActorRef = Akka.system.actorOf(Props(new AsyncMVCAsyncActor(taskCache, CLIENT_TIMEOUT)), actorName)
-  override def         actorRef = asyncActor
-  override def getClientTimeout = CLIENT_TIMEOUT
+  lazy val asyncActor: ActorRef = ActorSystem().actorOf(Props(new AsyncMVCAsyncActor(taskCache, CLIENT_TIMEOUT)), actorName)
+  override def actorRef: ActorRef = asyncActor
+  override def getClientTimeout: Long = CLIENT_TIMEOUT
 
 }
