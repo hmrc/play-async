@@ -27,7 +27,7 @@ import play.api.test._
 import uk.gov.hmrc.play.asyncmvc.async.TimedEvent
 import uk.gov.hmrc.play.asyncmvc.example.controllers.{AsyncMap, ExampleAsyncController, InputForm}
 import uk.gov.hmrc.play.asyncmvc.model.AsyncMvcSession
-import uk.gov.hmrc.play.asyncmvc.{UnitSpec, WithFakeApplication}
+import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
