@@ -23,10 +23,10 @@ import play.api.libs.json.Json
 import play.api.mvc.Controller
 import uk.gov.hmrc.http
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.asyncmvc.{UnitSpec, WithFakeApplication}
 import uk.gov.hmrc.play.asyncmvc.example.connectors.Stock
 import uk.gov.hmrc.play.asyncmvc.example.controllers.AsyncMvcIntegration
 import uk.gov.hmrc.play.asyncmvc.model.{StatusCodes, TaskCache}
+import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -15,13 +15,15 @@ object AppDependencies {
         "com.typesafe.play" %% "play" % play25Version % Provided,
         "com.typesafe.play" %% "play-test" % play25Version,
         "uk.gov.hmrc" %% "http-verbs" % "9.0.0-play-25", // Note: Only the HeaderCarrier is used from this library.
-        "org.scalatest" %% "scalatest" % "2.2.6" % Test
+        "org.scalatest" %% "scalatest" % "2.2.6" % Test,
+        "uk.gov.hmrc" %% "hmrctest" % "3.4.0-play-25" % Test
       ),
       play26 = Seq(
         "com.typesafe.play" %% "play" % play26Version % Provided,
         "com.typesafe.play" %% "play-test" % play26Version,
         "uk.gov.hmrc" %% "http-verbs" % "9.0.0-play-26", // Note: Only the HeaderCarrier is used from this library.
-        "org.scalatest" %% "scalatest" % "3.0.5" % Test
+        "org.scalatest" %% "scalatest" % "3.0.5" % Test,
+        "uk.gov.hmrc" %% "hmrctest" % "3.4.0-play-26" % Test
       )
     )
 
