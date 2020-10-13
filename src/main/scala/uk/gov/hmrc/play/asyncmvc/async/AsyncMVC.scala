@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import uk.gov.hmrc.http.HeaderCarrier
  */
 trait AsyncMVC[OUTPUT] extends AsyncTask[OUTPUT] with SessionHandler with AsyncValidation with LogWrapper {
 
-  Self:Controller =>
+  Self:Results =>
 
   def actorRef           : ActorRef                // Actor which is responsible for processing the Future function off-line.
   def waitForAsync       : Call                    // Wait for async route. Used when waitMode is true.
