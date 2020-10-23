@@ -4,7 +4,7 @@ import uk.gov.hmrc.versioning.SbtGitVersioning
 
 name := "play-async"
 
-val scalaV = "2.11.12"
+val scalaV = "2.12.11"
 
 lazy val library = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
