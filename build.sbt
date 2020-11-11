@@ -1,22 +1,19 @@
-import PlayCrossCompilation._
 import uk.gov.hmrc.SbtArtifactory
 import uk.gov.hmrc.versioning.SbtGitVersioning
 
 name := "play-async"
 
-val scalaV = "2.11.12"
-
 lazy val library = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
   .settings(
     majorVersion := 2,
-    scalaVersion := scalaV,
+    scalaVersion := "2.12.12",
     makePublicallyAvailableOnBintray := true,
-    crossScalaVersions := Seq(scalaV),
     libraryDependencies ++= AppDependencies(),
     resolvers := Seq(
       Resolver.bintrayRepo("hmrc", "releases"),
-      "typesafe-releases" at "http://repo.typesafe.com/typesafe/releases/"
+      Resolver.jcenterRepo,
+      "typesafe-releases" at "https://repo.typesafe.com/typesafe/releases/"
     ),
     scalacOptions ++= Seq(
       "-deprecation",
@@ -36,6 +33,5 @@ lazy val library = (project in file("."))
       "-Ywarn-unused-import",
       //"-Xfatal-warnings", - there are some discarded non-unit values and implicit numeric widenings that need work to eliminate
       "-Xlint"
-    ),
-    playCrossCompilationSettings
+    )
   )
