@@ -6,7 +6,7 @@ name := "play-async"
 lazy val library = (project in file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
   .settings(
-    majorVersion := 2,
+    majorVersion := 3,
     scalaVersion := "2.12.12",
     makePublicallyAvailableOnBintray := true,
     libraryDependencies ++= AppDependencies(),
