@@ -22,7 +22,7 @@ The play-async library shields the application server from the issues detailed a
 
 ## Features
 
-The play_async_mvc library addresses the above concerns with the following features…
+The play_async library addresses the above concerns with the following features…
 
 * Allow long running Future to be placed onto a background queue for off-line processing and disconnect the HTTP client from waiting on the result. This removes the need for the client to remain connected to the application server waiting for the result.
 * Throttle the number of concurrent async requests that are currently executing on a single application server instance.
@@ -114,8 +114,7 @@ The supported status codes which can be supplied to asyncUICallbackWithStatus ar
 
 ## Example PlayAsync controller
 
-uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleAsyncController	- Example async controller where the client is disconnected from the Future. The example is based on the ExampleNormalController controller where the Future and Result have been separated.
-
+[uk.gov.hmrc.play.asyncmvc.example.controllers.ExampleAsyncController](src/test/scala/uk/gov/hmrc/play/asyncmvc/example/controllers/ExampleAsyncController.scala)	- Example async controller where the client is disconnected from the Future. The example is based on the ExampleNormalController controller where the Future and Result have been separated.
 
 ## Installing
 
